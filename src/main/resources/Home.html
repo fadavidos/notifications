@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NOTIFICATIONS</title>
+</head>
+<body>
+<h1>NOTIFICATIONS</h1>
+
+<!-- Send Notification Section -->
+<h2>Send Notification</h2>
+<form id="notificationForm">
+  <label for="category">Category:</label>
+  <select id="category" name="category" required>
+    <!-- Categories will be populated dynamically using JavaScript -->
+  </select>
+  <br>
+  <label for="message">Message:</label>
+  <input type="text" id="message" name="message" required>
+  <br>
+  <button type="button" id="submitButton">Send</button>
+</form>
+
+<div id="responseMessage" style="display: none;"></div>
+
+<!-- Notification History Section -->
+<h2>Notification History</h2>
+<button type="button" id="historyButton">Fetch History</button>
+
+<table id="notificationTable" style="display: none;">
+  <thead>
+  <tr>
+    <th>Category</th>
+    <th>Message</th>
+    <th>Channel</th>
+    <th>Creation Date</th>
+    <th>User Id</th>
+    <th>User Name</th>
+  </tr>
+  </thead>
+  <tbody id="notificationTableBody">
+  </tbody>
+</table>
+
+<script>
+    const form = document.getElementById('myForm');
+    const submitButton = document.getElementById('submitButton');
+    const responseMessage = document.getElementById('responseMessage');
+    const historyButton = document.getElementById('historyButton');
+    const notificationTable = document.getElementById('notificationTable');
+    const notificationTableBody = document.getElementById('notificationTableBody');
+    const categoryDropdown = document.getElementById('category');
+    const messageInput = document.getElementById('message');
+
+    // Fetch and populate category dropdown
+    fetch('http://localhost:8080/api/categories')
+      .then(response => response.json())
+      .then(categories => {
+        categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          categoryDropdown.appendChild(option);
+        });
+      })
+      .catch(error => {
+        console.error('Error loading categories:', error);
+      });
+
+    submitButton.addEventListener('click', () => {
+      const category = categoryDropdown.value;
+      const message = messageInput.value;
+
+      if (!category || !message) {
+        responseMessage.style.color = 'red';
+        responseMessage.textContent = 'Error: Category and message are required fields.';
+        responseMessage.style.display = 'block';
+        return;
+      }
+
+      const data = {
+        category: category,
+        message: message
+      };
+
+      fetch('http://localhost:8080/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => {
+        if (response.ok) {
+          responseMessage.style.color = 'green';
+          responseMessage.textContent = 'Success: Data sent successfully.';
+        } else {
+          return response.text().then(error => {
+            responseMessage.style.color = 'red';
+            responseMessage.textContent = 'Error: ' + error;
+          });
+        }
+      })
+      .catch(error => {
+        responseMessage.style.color = 'red';
+        responseMessage.textContent = 'Error: ' + error.message;
+      });
+
+      responseMessage.style.display = 'block';
+    });
+
+    historyButton.addEventListener('click', () => {
+      loadNotificationHistory();
+    });
+
+    function loadNotificationHistory() {
+      fetch('http://localhost:8080/api/notifications')
+        .then(response => response.json())
+        .then(history => {
+          notificationTableBody.innerHTML = '';
+          history.forEach(entry => {
+            const row = notificationTableBody.insertRow();
+            const categoryCell = row.insertCell(0);
+            const messageCell = row.insertCell(1);
+            const channelCell = row.insertCell(2);
+            const dateCell = row.insertCell(3);
+            const userIdCell = row.insertCell(4);
+            const userNameCell = row.insertCell(5);
+
+            categoryCell.textContent = entry.category;
+            messageCell.textContent = entry.message;
+            channelCell.textContent = entry.channel;
+            dateCell.textContent = new Date(entry.creationDate).toLocaleString(); // Convert to localized date-time format
+            userIdCell.textContent = entry.userId;
+            userNameCell.textContent = entry.userName;
+
+            notificationTable.style.display = 'block';
+          });
+        })
+        .catch(error => {
+          console.error('Error loading notification history:', error);
+        });
+    }
+  </script>
+</body>
+</html>
